@@ -168,7 +168,7 @@ public class TeacherController {
 
         Quiz quiz = new Quiz();
         quiz.setUser(user);
-        quiz.setPublic(isPublic);
+        quiz.setIsPublic(isPublic);
 
         if (timeLimit != null && timeLimit > 0) {
             quiz.setTimeLimit(timeLimit);
@@ -225,7 +225,7 @@ public class TeacherController {
             return "redirect:/quizzes";
         }
 
-        quiz.setPublic(isPublic);
+        quiz.setIsPublic(isPublic);
 
         if (timeLimit != null && timeLimit > 0) {
             quiz.setTimeLimit(timeLimit);
@@ -395,6 +395,30 @@ public class TeacherController {
                             @RequestParam Long quizId) {
 
         assignmentRepo.deleteByClassroom_IdAndQuiz_QuizId(classId, quizId);
+
+        return "redirect:/teacher/classes";
+    }
+
+    @Transactional
+    @PostMapping("/class/delete")
+    public String deleteClassroom(@RequestParam Long classId,
+                                 HttpSession session) {
+                                
+        Classroom classroom = classRepo
+                .findById(classId)
+                .orElseThrow();
+
+       classroom.getStudents().clear();
+
+    // xóa assignment thật sự
+    assignmentRepo.deleteAll(classroom.getAssignments());
+
+    // flush assignment delete
+    classRepo.flush();
+
+    // xóa classroom
+    classRepo.delete(classroom);
+
 
         return "redirect:/teacher/classes";
     }

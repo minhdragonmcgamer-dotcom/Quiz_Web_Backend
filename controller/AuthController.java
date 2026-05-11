@@ -4,7 +4,6 @@ import com.example.quiz.entity.*;
 import com.example.quiz.repository.*;
 import jakarta.servlet.http.HttpSession;
 import java.util.*;
-import java.util.HashSet;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -103,46 +102,6 @@ public class AuthController {
     }
 
 
-    /*@GetMapping("/teacher")
-    public String teacherPage(HttpSession session) {
-
-        User user = (User) session.getAttribute("user");
-
-        if (user == null || !user.getRole().equals("ROLE_TEACHER")) {
-            return "redirect:/login";
-        }
-
-        return "teacher";
-    }
-        */
-
-
-    @GetMapping("/student")
-    public String studentDashboard(HttpSession session, Model model) {
-
-        User user = (User) session.getAttribute("user");
-
-        if (user == null || !"ROLE_STUDENT".equals(user.getRole())) {
-            return "redirect:/login";
-        }
-
-        List<Quiz> publicQuizzes = quizRepo.findByIsPublicTrue();
-
-        List<Classroom> classes = classRepo.findByStudents_Id(user.getId());
-
-        Set<Quiz> classQuizzes = new HashSet<>();
-        for (Classroom c : classes) {
-            classQuizzes.addAll(c.getAssignments().stream().filter(a -> a.getQuiz() != null).map(Assignment::getQuiz).collect(Collectors.toSet()));
-        }
-
-        Set<Quiz> all = new HashSet<>();
-        all.addAll(publicQuizzes);
-        all.addAll(classQuizzes);
-
-        model.addAttribute("quizzes", all);
-
-        return "student/dashboard";
-    }
 
 
 }

@@ -77,7 +77,6 @@ public class AdminController {
         User user = userRepo.findById(id).orElse(null);
         if (user == null) return "redirect:/admin/users";
 
-        // ❗ 1. Gỡ khỏi tất cả classroom (students)
         List<Classroom> classes = classRepo.findAll();
 
         for (Classroom c : classes) {
@@ -85,7 +84,6 @@ public class AdminController {
         }
         classRepo.saveAll(classes);
 
-        // ❗ 2. Nếu user là teacher → gỡ khỏi classroom.teacher
         for (Classroom c : classes) {
             if (c.getTeacher() != null && c.getTeacher().getId().equals(id)) {
                 c.setTeacher(null);
@@ -93,14 +91,11 @@ public class AdminController {
         }
         classRepo.saveAll(classes);
 
-        // ❗ 3. Xóa result của user
         resultRepo.deleteByUser_UserId(id);
 
-        // ❗ 4. Nếu là teacher → xử lý quiz
         List<Quiz> quizzes = quizRepo.findByUser_UserId(id);
 
         for (Quiz q : quizzes) {
-            // gỡ khỏi classroom
             for (Classroom c : classes) {
                 c.getAssignments().removeIf(a -> a.getQuiz() != null && a.getQuiz().getQuizId().equals(q.getQuizId()));
             }
@@ -109,7 +104,6 @@ public class AdminController {
 
         quizRepo.deleteAll(quizzes);
 
-        // ❗ 5. Cuối cùng mới xóa user
         userRepo.delete(user);
 
         return "redirect:/admin/users";
@@ -217,7 +211,6 @@ public class AdminController {
         Quiz quiz = quizRepo.findById(id).orElse(null);
         if (quiz == null) return "redirect:/admin/quizzes";
 
-        // Remove all assignments associated with this quiz
         List<Classroom> classes = classRepo.findAll();
         for (Classroom c : classes) {
             c.getAssignments().removeIf(a -> a.getQuiz() != null && a.getQuiz().getQuizId().equals(id));

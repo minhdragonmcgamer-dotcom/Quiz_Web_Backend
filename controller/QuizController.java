@@ -45,10 +45,9 @@ public class QuizController {
     private AssignmentRepository assignmentRepo;
 
     
-
-    //DANH SÁCH QUIZ
-    @GetMapping("/quizzes")
-    public String listQuiz(Model model, HttpSession session) {
+    //DASHBOARD HỌC SINH
+    @GetMapping("/student")
+    public String studentDashboard(HttpSession session, Model model) {
 
         User user = (User) session.getAttribute("user");
 
@@ -58,16 +57,9 @@ public class QuizController {
 
             List<Quiz> publicQuizzes = quizRepo.findByIsPublicTrue();
 
-            List<Classroom> classes = classRepo.findByStudents_Id(user.getId());
-
-            Set<Quiz> classQuizzes = new HashSet<>();
-            for (Classroom c : classes) {
-                classQuizzes.addAll(c.getAssignments().stream().filter(a -> a.getQuiz() != null).map(Assignment::getQuiz).collect(Collectors.toSet()));
-            }
 
             Set<Quiz> result = new HashSet<>();
             result.addAll(publicQuizzes);
-            result.addAll(classQuizzes);
 
             quizzes = new ArrayList<>(result);
         }
@@ -175,77 +167,45 @@ public class QuizController {
     public String submit(@RequestParam Map<String, String> answers,
                         HttpSession session,
                         Model model) {
-        
-        String quizIdStr = answers.get("quizId");
-        if (quizIdStr == null) return "redirect:/quizzes";
-        
-        Long quizId = Long.parseLong(quizIdStr);
-        Quiz quiz = quizRepo.findById(quizId).orElse(null);
-        if (quiz == null) return "redirect:/quizzes";
-
-        int score = 0;
-        List<Question> questions = quiz.getQuestions();
-        int total = questions.size();
-
-        for (Question q : questions) {
-            String answerValue = answers.get("q_" + q.getQuestionId());
-            if (answerValue != null) {
-                Long optionId = Long.parseLong(answerValue);
-                OptionAnswer opt = optionRepo.findById(optionId).orElse(null);
-                if (opt != null && opt.isCorrect()) {
-                    score++;
-                }
-            }
-        }
-
-        User user = (User) session.getAttribute("user");
-        Result result = new Result();
-        result.setUser(user);
-        result.setScore(score);
-        result.setTotalQuestion(total);
-        result.setQuiz(quiz);
-        result.setAssignment(null); 
-        resultRepo.save(result);
-
-        // Xóa session timer sau khi đã nộp bài thành công
-        session.removeAttribute("quiz_start_" + quizId);
-
-        model.addAttribute("score", score);
-        model.addAttribute("total", total);
-        model.addAttribute("quiz", quiz);
-
-        return "student/result"; 
-    }
-
-    @PostMapping("/assignment/submit")
-    public String submitAssignment(@RequestParam Map<String, String> answers,
-                                HttpSession session,
-                                Model model) {
 
         String quizIdStr = answers.get("quizId");
-        if (quizIdStr == null) return "redirect:/quizzes";
+
+        if (quizIdStr == null)
+            return "redirect:/quizzes";
 
         Long quizId = Long.parseLong(quizIdStr);
 
         Quiz quiz = quizRepo.findById(quizId).orElse(null);
-        if (quiz == null) return "redirect:/quizzes";
 
-        // Lấy assignmentId từ form
-        String assignmentIdStr = answers.get("assignmentId");
+        if (quiz == null)
+            return "redirect:/quizzes";
+
+
         Assignment assignment = null;
 
-        if (assignmentIdStr != null) {
-            assignment = assignmentRepo.findById(Long.parseLong(assignmentIdStr)).orElse(null);
+        String assignmentIdStr = answers.get("assignmentId");
+
+        if (assignmentIdStr != null && !assignmentIdStr.isBlank()) {
+
+            assignment = assignmentRepo
+                    .findById(Long.parseLong(assignmentIdStr))
+                    .orElse(null);
         }
+
 
         int score = 0;
 
         for (Question q : quiz.getQuestions()) {
-            String answerValue = answers.get("q_" + q.getQuestionId());
+
+            String answerValue =
+                    answers.get("q_" + q.getQuestionId());
 
             if (answerValue != null) {
+
                 Long optionId = Long.parseLong(answerValue);
-                OptionAnswer opt = optionRepo.findById(optionId).orElse(null);
+
+                OptionAnswer opt =
+                        optionRepo.findById(optionId).orElse(null);
 
                 if (opt != null && opt.isCorrect()) {
                     score++;
@@ -253,20 +213,22 @@ public class QuizController {
             }
         }
 
+
         User user = (User) session.getAttribute("user");
 
         Result result = new Result();
+
         result.setUser(user);
-        result.setScore(score);
-        result.setTotalQuestion(quiz.getQuestions().size());
         result.setQuiz(quiz);
 
-        // SAFE
-        if (assignment != null) {
-            result.setAssignment(assignment);
-        }
+        result.setScore(score);
+        result.setTotalQuestion(quiz.getQuestions().size());
+
+        result.setAssignment(assignment);
 
         resultRepo.save(result);
+
+        session.removeAttribute("quiz_start_" + quizId);
 
         model.addAttribute("score", score);
         model.addAttribute("total", quiz.getQuestions().size());
@@ -274,6 +236,7 @@ public class QuizController {
 
         return "student/result";
     }
+
 
 
     @GetMapping("/classes")
