@@ -408,15 +408,15 @@ public class TeacherController {
                 .findById(classId)
                 .orElseThrow();
 
-       classroom.getStudents().clear();
-
-    // xóa assignment thật sự
+    classroom.getStudents().clear();
+        
+    for (Assignment a : classroom.getAssignments()) {
+        resultRepo.deleteByAssignment(a);
+    }
+        
     assignmentRepo.deleteAll(classroom.getAssignments());
 
-    // flush assignment delete
     classRepo.flush();
-
-    // xóa classroom
     classRepo.delete(classroom);
 
 
