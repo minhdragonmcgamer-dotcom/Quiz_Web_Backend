@@ -10,6 +10,6 @@ public interface ResultRepository extends JpaRepository<Result, Long> {
     void deleteByQuiz_QuizId(Long quizId);
     void deleteByUser_UserId(Long userId);
     List<Result> findByQuiz_QuizId(Long quizId);
-
+    void deleteByAssignment(Assignment assignment);
     boolean existsByUser_UserIdAndQuiz_QuizId(Long userId, Long quizId);
 }
