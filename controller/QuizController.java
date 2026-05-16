@@ -10,19 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import java.time.format.DateTimeFormatter;
-import java.util.stream.Collectors;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
-/* 
-admin
-giao dien
-import cau hoi excel
-rang buoc
-bao cao
-*/
+
 @Controller
 public class QuizController {
 
@@ -44,10 +36,16 @@ public class QuizController {
     @Autowired
     private AssignmentRepository assignmentRepo;
 
+    public boolean isStudent(HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        return user != null && user.getRole().equals("ROLE_STUDENT");
+    }
     
     //DASHBOARD HỌC SINH
     @GetMapping("/student")
     public String studentDashboard(HttpSession session, Model model) {
+
+        if (!isStudent(session)) return "redirect:/login";
 
         User user = (User) session.getAttribute("user");
 
@@ -55,13 +53,7 @@ public class QuizController {
 
         if (user != null && "ROLE_STUDENT".equals(user.getRole())) {
 
-            List<Quiz> publicQuizzes = quizRepo.findByIsPublicTrue();
-
-
-            Set<Quiz> result = new HashSet<>();
-            result.addAll(publicQuizzes);
-
-            quizzes = new ArrayList<>(result);
+            quizzes.addAll(quizRepo.findByIsPublicTrue());
         }
 
         model.addAttribute("quizzes", quizzes);
@@ -76,31 +68,35 @@ public class QuizController {
                         Model model) {
 
         User user = (User) session.getAttribute("user");
+
+        if (!isStudent(session)) {
+            return "redirect:/login";
+        }
+
         Quiz quiz = quizRepo.findById(id).orElse(null);
 
         if (quiz == null) {
             return "redirect:/quizzes";
         }        
 
-
         boolean isPublic = quiz.getIsPublic();
         boolean inClass = false;
 
-        if (user != null && "ROLE_STUDENT".equals(user.getRole())) {
+        
 
-            List<Classroom> classes = classRepo.findByStudents_Id(user.getId());
+        List<Classroom> classes = classRepo.findByStudents_Id(user.getId());
 
-            for (Classroom c : classes) {
-                if (c.getAssignments().stream().anyMatch(a -> a.getQuiz() != null && a.getQuiz().equals(quiz))) {
-                    inClass = true;
-                    break;
-                }
-            }
-
-            if (!isPublic && !inClass) {
-                return "student/classes";
+        for (Classroom c : classes) {
+            if (c.getAssignments().stream().anyMatch(a -> a.getQuiz() != null && a.getQuiz().equals(quiz))) {
+                inClass = true;
+                break;
             }
         }
+
+        if (!isPublic && !inClass) {
+            return "student/classes";
+        }
+        
 
         if (quiz.getTimeLimit() != null) {
             String sessionKey = "quiz_start_" + id;
@@ -131,11 +127,12 @@ public class QuizController {
     @GetMapping("/assignment/{id}")
     public String takeAssignment(@PathVariable Long id, Model model, HttpSession session) {
 
+
         Assignment a = assignmentRepo.findById(id).orElse(null);
         if (a == null || a.getQuiz() == null) return "redirect:/quizzes";
 
         User user = (User) session.getAttribute("user");
-        if (user == null || !"ROLE_STUDENT".equals(user.getRole())) {
+        if (!isStudent(session)) {
             return "redirect:/login";
         }
 
@@ -167,6 +164,12 @@ public class QuizController {
     public String submit(@RequestParam Map<String, String> answers,
                         HttpSession session,
                         Model model) {
+
+        User user = (User) session.getAttribute("user");
+
+        if (!isStudent(session)) {
+            return "redirect:/login";
+        }
 
         String quizIdStr = answers.get("quizId");
 
@@ -214,8 +217,6 @@ public class QuizController {
         }
 
 
-        User user = (User) session.getAttribute("user");
-
         Result result = new Result();
 
         result.setUser(user);
@@ -244,7 +245,7 @@ public class QuizController {
 
         User user = (User) session.getAttribute("user");
 
-        if (user == null || !"ROLE_STUDENT".equals(user.getRole())) {
+        if (!isStudent(session)) {
             return "redirect:/login";
         }
 
@@ -260,7 +261,7 @@ public class QuizController {
 
         User user = (User) session.getAttribute("user");
 
-        if (user == null || !"ROLE_STUDENT".equals(user.getRole())) {
+        if (!isStudent(session)) {
             return "redirect:/login";
         }
 
