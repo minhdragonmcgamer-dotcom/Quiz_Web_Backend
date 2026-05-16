@@ -166,6 +166,10 @@ public class TeacherController {
 
         User user = (User) session.getAttribute("user");
 
+        if (user == null || !"ROLE_TEACHER".equals(user.getRole())) {
+            return "redirect:/login";
+        }
+
         Quiz quiz = new Quiz();
         quiz.setUser(user);
         quiz.setIsPublic(isPublic);
@@ -190,6 +194,10 @@ public class TeacherController {
 
         User user = (User) session.getAttribute("user");
 
+        if (user == null || !"ROLE_TEACHER".equals(user.getRole())) {
+            return "redirect:/login";
+        }
+
         Quiz quiz = quizRepo.findById(id).orElse(null);
 
         if (quiz == null || !quiz.getUser().getId().equals(user.getId())) {
@@ -198,8 +206,7 @@ public class TeacherController {
 
         model.addAttribute("quiz", quiz);
         model.addAttribute("action", "/teacher/edit/" + id);
-        
-        
+            
         quiz.getQuestions().forEach(q ->
             q.getOptions().sort(Comparator.comparing(
                 OptionAnswer::getOptionId,
@@ -218,6 +225,10 @@ public class TeacherController {
                             HttpSession session) {
 
         User user = (User) session.getAttribute("user");
+
+        if (user == null || !"ROLE_TEACHER".equals(user.getRole())) {
+            return "redirect:/login";
+        }
 
         Quiz quiz = quizRepo.findById(id).orElse(null);
 
@@ -257,6 +268,10 @@ public class TeacherController {
 
         User user = (User) session.getAttribute("user");
 
+        if (user == null || !"ROLE_TEACHER".equals(user.getRole())) {
+            return "redirect:/login";
+        }
+
         Quiz quiz = quizRepo.findById(id).orElse(null);
 
         if (quiz == null || user == null || !quiz.getUser().getId().equals(user.getId())) {
@@ -282,7 +297,13 @@ public class TeacherController {
 
 
     @GetMapping("/quiz/{id}/results")
-    public String quizResults(@PathVariable Long id, Model model) {
+    public String quizResults(@PathVariable Long id, Model model, HttpSession session) {
+
+        User user = (User) session.getAttribute("user");
+        
+        if (user == null || !"ROLE_TEACHER".equals(user.getRole())) {
+            return "redirect:/login";
+        }
 
         model.addAttribute("results", resultRepo.findById(id));
         return "teacher/results";
@@ -293,6 +314,10 @@ public class TeacherController {
     public String classPage(Model model, HttpSession session) {
 
         User teacher = (User) session.getAttribute("user");
+
+        if (teacher == null || !"ROLE_TEACHER".equals(teacher.getRole())) {
+            return "redirect:/login";
+        }
 
         List<Classroom> classes = classRepo.findByTeacher_UserId(teacher.getId());
         List<Quiz> quizzes = quizRepo.findByUser_UserId(teacher.getId());
@@ -309,6 +334,10 @@ public class TeacherController {
 
         User teacher = (User) session.getAttribute("user");
 
+        if (teacher == null || !"ROLE_TEACHER".equals(teacher.getRole())) {
+            return "redirect:/login";
+        }
+
         Classroom c = new Classroom();
         c.setName(name);
         c.setTeacher(teacher);
@@ -320,7 +349,13 @@ public class TeacherController {
 
     @PostMapping("/class/add-student")
     public String addStudent(@RequestParam Long classId,
-                            @RequestParam String studentCodes) {
+                            @RequestParam String studentCodes,
+                            HttpSession session) {
+
+        User teacher = (User) session.getAttribute("user");
+        if (teacher == null || !"ROLE_TEACHER".equals(teacher.getRole())) {
+            return "redirect:/login";
+        }
 
         Classroom c = classRepo.findById(classId).orElse(null);
 
@@ -343,7 +378,13 @@ public class TeacherController {
 
     @PostMapping("/class/remove-student")
     public String removeStudent(@RequestParam Long classId,
-                                @RequestParam Long userId) {
+                                @RequestParam Long userId,
+                                HttpSession session) {
+
+        User teacher = (User) session.getAttribute("user");
+        if (teacher == null || !"ROLE_TEACHER".equals(teacher.getRole())) {
+            return "redirect:/login";
+        }
 
         Classroom c = classRepo.findById(classId).orElse(null);
         User u = userRepo.findById(userId).orElse(null);
@@ -363,7 +404,13 @@ public class TeacherController {
                                 @RequestParam Long quizId,
                                 @RequestParam String startTime,
                                 @RequestParam String endTime,
-                                @RequestParam(required=false) Integer timeLimit) {
+                                @RequestParam(required=false) Integer timeLimit,
+                                HttpSession session) {
+
+        User teacher = (User) session.getAttribute("user");
+        if (teacher == null || !"ROLE_TEACHER".equals(teacher.getRole())) {
+            return "redirect:/login";
+        }
 
         Classroom c = classRepo.findById(id).orElse(null);
         Quiz q = quizRepo.findById(quizId).orElse(null);
@@ -392,7 +439,13 @@ public class TeacherController {
     @PostMapping("/class/remove-quiz")
     @Transactional
     public String removeQuiz(@RequestParam Long classId,
-                            @RequestParam Long quizId) {
+                            @RequestParam Long quizId,
+                            HttpSession session) {
+
+        User teacher = (User) session.getAttribute("user");
+        if (teacher == null || !"ROLE_TEACHER".equals(teacher.getRole())) {
+            return "redirect:/login";
+        }
 
         assignmentRepo.deleteByClassroom_IdAndQuiz_QuizId(classId, quizId);
 
@@ -402,23 +455,27 @@ public class TeacherController {
     @Transactional
     @PostMapping("/class/delete")
     public String deleteClassroom(@RequestParam Long classId,
-                                 HttpSession session) {
+                                HttpSession session) {
                                 
+        User teacher = (User) session.getAttribute("user");
+        if (teacher == null || !"ROLE_TEACHER".equals(teacher.getRole())) {
+            return "redirect:/login";
+        }
+
         Classroom classroom = classRepo
                 .findById(classId)
                 .orElseThrow();
 
-    classroom.getStudents().clear();
-        
-    for (Assignment a : classroom.getAssignments()) {
-        resultRepo.deleteByAssignment(a);
-    }
-        
-    assignmentRepo.deleteAll(classroom.getAssignments());
+        classroom.getStudents().clear();
 
-    classRepo.flush();
-    classRepo.delete(classroom);
+        for (Assignment a : classroom.getAssignments()) {
+            resultRepo.deleteByAssignment(a);
+        }
 
+        assignmentRepo.deleteAll(classroom.getAssignments());
+
+        classRepo.flush();
+        classRepo.delete(classroom);
 
         return "redirect:/teacher/classes";
     }
@@ -469,7 +526,9 @@ public class TeacherController {
 
         User user = (User) session.getAttribute("user");
 
-        if (user == null) return "redirect:/login";
+        if (user == null || !"ROLE_TEACHER".equals(user.getRole())) {
+            return "redirect:/login";
+        }
 
         Quiz quiz = new Quiz();
         quiz.setTitle(title);
@@ -511,7 +570,10 @@ public class TeacherController {
                 }
 
                 for (int j = 1; j <= 4; j++) {
-                    String optContent = row.getCell(j).toString();
+                    Cell optCell = row.getCell(j);
+
+                    String optContent =
+                            optCell == null ? "" : optCell.toString().trim();
 
                     OptionAnswer opt = new OptionAnswer();
                     opt.setContent(optContent);
@@ -545,6 +607,9 @@ public class TeacherController {
                                 Model model) {
 
         User user = (User) session.getAttribute("user");
+        if (user == null || !"ROLE_TEACHER".equals(user.getRole())) {
+            return "redirect:/login";
+        }
 
         Quiz quiz = quizRepo.findById(quizId).orElse(null);
 
@@ -566,7 +631,10 @@ public class TeacherController {
                                RedirectAttributes redirect) {
     
         User user = (User) session.getAttribute("user");
-    
+        if (user == null || !"ROLE_TEACHER".equals(user.getRole())) {
+            return "redirect:/login";
+        }
+
         Quiz quiz = quizRepo.findById(quizId).orElse(null);
     
         if (quiz == null || user == null ||
